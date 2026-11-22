@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: vaughngpt
+    runtime: docker
+    plan: free
+    envVars:
+      - key: LLM_API_KEY
+        sync: false   # set your real key in the Render dashboard — never commit it
+      - key: LLM_BASE_URL
+        value: https://api.openai.com/v1
+      - key: LLM_MODEL
+        value: gpt-4o-mini
