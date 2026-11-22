@@ -117,6 +117,7 @@ def macd(closes):
 def quant(symbol):
     symbol = symbol.upper()
     if symbol in CRYPTO:
+        # crypto: use Yahoo BTC-USD history for quant
         meta, closes = yahoo_history(f"{symbol}-USD")
         name = CRYPTO[symbol].capitalize()
     else:
@@ -159,7 +160,7 @@ def quant(symbol):
 def format_quant(q):
     r, m = q["returns_pct"], q["macd"] or {}
     lines = [f"**{q['symbol']} — {q['name']}**  ${q['price']}  _(live, {q['source']}, {q['as_of'][:19]}Z)_",
-      f"- Returns: 1M {r['1M']}% · 3M {r['3M']}% · 6M {r['6M']}% · 1Y {r['1Y']}%%",
+      f"- Returns: 1M {r['1M']}% · 3M {r['3M']}% · 6M {r['6M']}% · 1Y {r['1Y']}%",
       f"- Volatility (annualized): {q['annualized_volatility_pct']}% · Sharpe (rf=0): {q['sharpe_rf0']} · Beta vs SPY: {q['beta_vs_spy']}",
       f"- RSI(14): {q['rsi_14']} · MACD {m.get('macd')} / signal {m.get('signal')} / hist {m.get('histogram')}",
       f"- Trend: SMA50 ${q['sma_50']} (price {q['vs_sma50']}) · SMA200 ${q['sma_200']} (price {q['vs_sma200']})",
@@ -184,6 +185,7 @@ def handle_chat(messages):
         try: quants.append(quant(t))
         except Exception as e: errors.append(f"{t}: {e}")
     if not LLM_API_KEY:
+        # DEMO MODE — no Muse tokens, no provider key yet: answer from live quant data directly
         if quants:
             body = "\n\n".join(format_quant(q) for q in quants)
             return {"mode": "demo", "reply": body + "\n\n— *Demo mode: this answer was computed live from market data by VaughnGPT's own quant engine. Add your model API key on the server (LLM_API_KEY) to unlock full general AI chat.*"}
