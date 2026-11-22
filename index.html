@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VaughnGPT — Independent</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0b0f14;color:#e8eef4}
+header{padding:14px 18px;border-bottom:1px solid #1d2733;display:flex;justify-content:space-between;align-items:center}
+h1{font-size:20px;margin:0}.badge{font-size:12px;padding:4px 10px;border-radius:999px;background:#123524;color:#4ade80;border:1px solid #1f5c3a}
+.badge.demo{background:#3a2f10;color:#facc15;border-color:#6b5518}
+#tape{display:flex;gap:10px;overflow-x:auto;padding:10px 14px;border-bottom:1px solid #1d2733;background:#0e141c}
+.tick{min-width:118px;padding:8px 10px;border:1px solid #223041;border-radius:10px;cursor:pointer;background:#111926}
+.tick b{font-size:13px}.tick .p{font-size:15px;margin-top:2px}.up{color:#4ade80}.down{color:#f87171}
+main{display:grid;grid-template-columns:1fr 340px;gap:0;max-width:1280px;margin:0 auto}
+@media(max-width:900px){main{grid-template-columns:1fr}#panel{order:2}}
+#chat{padding:18px;display:flex;flex-direction:column;gap:12px;min-height:55vh}
+.msg{max-width:88%;padding:11px 14px;border-radius:14px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+.user{align-self:flex-end;background:#14532d}.bot{align-self:flex-start;background:#16202d;border:1px solid #223041}
+#composer{display:flex;gap:8px;padding:14px 18px;border-top:1px solid #1d2733;position:sticky;bottom:0;background:#0b0f14}
+#input{flex:1;padding:12px;border-radius:10px;border:1px solid #2a3a4f;background:#111926;color:#fff;font-size:15px}
+button{padding:12px 18px;border-radius:10px;border:0;background:#16a34a;color:#fff;font-weight:600;cursor:pointer}
+aside{padding:18px;border-left:1px solid #1d2733;background:#0e141c}aside h2{font-size:15px;margin:0 0 10px}
+.kv{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #223041;font-size:13.5px}
+details{margin-top:18px;background:#111926;border:1px solid #223041;border-radius:10px;padding:12px}code{background:#0b0f14;padding:1px 5px;border-radius:4px;color:#facc15}
+.small{font-size:12.5px;color:#93a5b8;line-height:1.55}.chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 8px}
+.chip{font-size:12.5px;padding:6px 11px;border-radius:999px;border:1px solid #2a3a4f;background:#111926;color:#cbd5e1;cursor:pointer}
+</style></head><body>
+<header><h1>VaughnGPT <span style="color:#4ade80">Independent</span></h1><span id="mode" class="badge">…</span></header>
+<div id="tape">Loading live tape…</div>
+<main>
+<section>
+<div id="chat"><div class="msg bot">I'm VaughnGPT — your own AI, running on your own server. Ask me anything. Name a ticker (NVDA, SPY, BTC…) and I'll pull live data and answer quantitatively.</div></div>
+<div class="chips">
+<span class="chip" onclick="ask('Analyze NVDA quantitatively')">Analyze NVDA quantitatively</span>
+<span class="chip" onclick="ask('Compare SPY and QQQ')">Compare SPY vs QQQ</span>
+<span class="chip" onclick="ask('How risky is TSLA right now?')">How risky is TSLA?</span>
+<span class="chip" onclick="ask('Write a business plan outline for a food truck')">Do-anything test: business plan</span>
+</div>
+<form id="composer"><input id="input" placeholder="Message VaughnGPT…" autocomplete="off"><button type="submit">Send</button></form>
+</section>
+<aside id="panel"><h2>Quant Panel</h2><div id="quant" class="small">Tap a ticker on the tape to load its full quantitative breakdown — returns, volatility, RSI, MACD, moving averages, drawdown, Sharpe, and beta, all computed from ~1 year of real price history.</div>
+<details><summary><b>⚙️ Settings — API key</b></summary>
+<p class="small">Your model API key is set <b>on the server</b>, never in this chat and never in browser storage. Set these environment variables where the server runs, then restart it:</p>
+<p class="small"><code>LLM_API_KEY</code> — your provider key<br><code>LLM_BASE_URL</code> — default <code>https://api.openai.com/v1</code> (any OpenAI-compatible provider works: OpenAI, Together, Groq, Meta gateways, local Ollama)<br><code>LLM_MODEL</code> — default <code>gpt-4o-mini</code>, change to your provider's model name</p>
+<p class="small">With no key set, VaughnGPT runs in <b>Demo Mode</b>: live market &amp; quant answers still work; general AI chat waits for the key. This site uses <b>zero Muse tokens</b> — model usage is billed by your own provider, to your own account.</p>
+</details></aside>
+</main>
+<script>
+const tape=document.getElementById('tape'),chat=document.getElementById('chat'),quantEl=document.getElementById('quant');
+async function loadTape(){try{const d=await(await fetch('/api/market')).json();tape.innerHTML='';
+ d.quotes.forEach(q=>{const el=document.createElement('div');el.className='tick';
+  el.innerHTML=q.error?`<b>${q.symbol}</b><div class="p">—</div>`:`<b>${q.symbol}</b><div class="p">$${q.price}</div><div class="${q.change_pct>=0?'up':'down'}">${q.change_pct>=0?'▲':'▼'} ${q.change_pct}%</div>`;
+  el.onclick=()=>loadQuant(q.symbol);tape.appendChild(el);});
+ document.getElementById('mode').textContent='Live tape · '+new Date(d.as_of).toLocaleTimeString();}catch(e){tape.textContent='Tape failed to load — check server logs.'}}
+async function loadQuant(sym){quantEl.textContent='Computing '+sym+'…';try{const q=await(await fetch('/api/quant/'+sym)).json();
+ if(q.error){quantEl.textContent=q.error;return}const m=q.macd||{};
+ quantEl.innerHTML=`<div class="kv"><span><b>${q.symbol}</b> ${q.name}</span><b>$${q.price}</b></div>
+ <div class="kv"><span>Returns 1M / 3M / 6M / 1Y</span><span>${q.returns_pct['1M']}% / ${q.returns_pct['3M']}% / ${q.returns_pct['6M']}% / ${q.returns_pct['1Y']}%</span></div>
+ <div class="kv"><span>Volatility (ann.)</span><span>${q.annualized_volatility_pct}%</span></div>
+ <div class="kv"><span>RSI (14)</span><span>${q.rsi_14}</span></div>
+ <div class="kv"><span>MACD / Signal</span><span>${m.macd} / ${m.signal}</span></div>
+ <div class="kv"><span>SMA 50 / 200</span><span>$${q.sma_50} / $${q.sma_200}</span></div>
+ <div class="kv"><span>Trend vs SMA200</span><span>${q.vs_sma200}</span></div>
+ <div class="kv"><span>Max drawdown (1Y)</span><span>${q.max_drawdown_pct}%</span></div>
+ <div class="kv"><span>Sharpe (rf=0)</span><span>${q.sharpe_rf0}</span></div>
+ <div class="kv"><span>Beta vs SPY</span><span>${q.beta_vs_spy}</span></div>
+ <div class="kv"><span>52-wk range</span><span>$${q.week52_low} – $${q.week52_high}</span></div>
+ <p class="small">Source: ${q.source}. Educational numbers, not financial advice.</p>`;}catch(e){quantEl.textContent='Quant failed: '+e}}
+function add(role,text){const d=document.createElement('div');d.className='msg '+(role==='user'?'user':'bot');d.textContent=text;chat.appendChild(d);d.scrollIntoView({behavior:'smooth'})}
+const history=[];
+async function send(text){add('user',text);history.push({role:'user',content:text});
+ try{const d=await(await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history})})).json();
+ add('bot',d.reply||d.error||'No reply');history.push({role:'assistant',content:d.reply||''});}catch(e){add('bot','Chat failed: '+e)}}
+function ask(t){send(t)}
+document.getElementById('composer').onsubmit=e=>{e.preventDefault();const i=document.getElementById('input');if(i.value.trim()){send(i.value.trim());i.value=''}};
+fetch('/api/health').then(r=>r.json()).then(h=>{const b=document.getElementById('mode');if(h.mode==='demo'){b.className='badge demo';b.textContent='DEMO MODE — add LLM_API_KEY for full AI chat'}}).catch(()=>{});
+loadTape();
+</script></body></html>
